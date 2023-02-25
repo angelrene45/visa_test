@@ -1,10 +1,12 @@
 import time
 import re
+import sys
 from datetime import datetime 
 
 import dateparser
 from seleniumwire import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
+from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
@@ -17,13 +19,21 @@ def generate_proxy():
         Proxies for proxy seller
 
         Your proxy:
-        154.16.177.250
-        45.170.255.87
+        166.88.125.193:8800
+        185.206.128.134:8800
+        185.206.128.49:8800
+        166.88.125.75:8800
+        196.51.149.86:8800
+        196.51.149.63:8800
+        185.206.128.217:8800
+        185.206.128.97:8800
+        196.51.146.104:8800
+        196.51.146.46:8800
     """
     return {
         'proxy': {
-            'http': 'http://arherrera0:FHWoD6r67f@45.170.255.87:50100',
-            'https': 'https://arherrera0:FHWoD6r67f@45.170.255.87:50100',
+            'http': 'http://166.88.125.75:8800',
+            'https': 'https://166.88.125.75:8800',
             'no_proxy': 'localhost,127.0.0.1'
         }
     }
@@ -45,30 +55,33 @@ def set_login(driver):
     driver.implicitly_wait(10)
 
 def get_current_appointment(driver):
-    wait = WebDriverWait(driver, 10)
-    continue_button = wait.until(EC.presence_of_element_located((By.LINK_TEXT, 'Continuar')))
+    try:
+        wait = WebDriverWait(driver, 10)
+        continue_button = wait.until(EC.presence_of_element_located((By.LINK_TEXT, 'Continuar')))
 
-    consular_appt = driver.find_element(By.CLASS_NAME, "consular-appt")
-    asc_appt = driver.find_element(By.CLASS_NAME, "asc-appt")
+        consular_appt = driver.find_element(By.CLASS_NAME, "consular-appt")
+        asc_appt = driver.find_element(By.CLASS_NAME, "asc-appt")
 
-    consular_appt_text = consular_appt.text
-    asc_appt_text = asc_appt.text
+        consular_appt_text = consular_appt.text
+        asc_appt_text = asc_appt.text
 
-    # pattern for extract date
-    pattern = r"\d{1,2}\s\w+,\s\d{4}"
+        # pattern for extract date
+        pattern = r"\d{1,2}\s\w+,\s\d{4}"
 
-    # find dates
-    match_1 = re.search(pattern, consular_appt_text)
-    match_2 = re.search(pattern, asc_appt_text)
+        # find dates
+        match_1 = re.search(pattern, consular_appt_text)
+        match_2 = re.search(pattern, asc_appt_text)
 
-    if match_1 and match_2:
-        date_str_1 = match_1.group()
-        date_str_2 = match_1.group()
+        if match_1 and match_2:
+            date_str_1 = match_1.group()
+            date_str_2 = match_1.group()
 
-        date_consular = dateparser.parse(date_str_1).strftime('%Y-%m-%d')
-        date_asc = dateparser.parse(date_str_2).strftime('%Y-%m-%d')
-
-        return date_consular, date_asc
+            date_consular = dateparser.parse(date_str_1).strftime('%Y-%m-%d')
+            date_asc = dateparser.parse(date_str_2).strftime('%Y-%m-%d')
+            return date_consular, date_asc
+    except Exception as e:
+        print("There aren't current appointments")
+        return '2024-08-30', '2024-08-30'
 
 def set_single_appointment(type_appointment, input_cities, input_date_name, input_time_name) -> bool:
     """
@@ -84,12 +97,12 @@ def set_single_appointment(type_appointment, input_cities, input_date_name, inpu
 
     # wait for 10 seconds for inputs 
     wait = WebDriverWait(driver, 10)
+    print(f"Appointment {type_appointment}")
 
     for city in cities_names:
         # select current city
         input_cities.select_by_visible_text(city)
         time.sleep(2)
-        print(f"Appointment {type_appointment}")
         print(f"City: {city}")
 
         # check if there are appointments
@@ -113,10 +126,11 @@ def set_single_appointment(type_appointment, input_cities, input_date_name, inpu
         datepicker = driver.find_element(By.ID, 'ui-datepicker-div')
 
         # try on consulate 
+        date_greater_than_current = False
         while True:
             month = driver.find_element(By.CLASS_NAME, 'ui-datepicker-month').text
             year = driver.find_element(By.CLASS_NAME, 'ui-datepicker-year').text
-            if year == "2025": break
+            if year == "2025" or date_greater_than_current: break
 
             # finds all td for dates
             tds = datepicker.find_elements(By.TAG_NAME, 'td')
@@ -133,21 +147,51 @@ def set_single_appointment(type_appointment, input_cities, input_date_name, inpu
                 year = int(td.get_attribute('data-year'))
                 day = int(td.find_element(By.TAG_NAME, 'a').text)
                 date = datetime(year=year, month=month+1, day=day).strftime('%Y-%m-%d')
-                print("Display date", td.get_attribute("outerHTML"), date)
+                print("Display date", date)
+
+                # check the date is lower than current_date
+                current_date = datetime.strptime(date_consular, '%Y-%m-%d')
+                new_date = datetime.strptime(date, '%Y-%m-%d')
+                if new_date > current_date:
+                    print(f"Date {new_date} is greater than current date {current_date}, skip {city} appointments")
+                    date_greater_than_current = True
+                    # hide date picker (click on any element for hide datepicker)
+                    li_element = driver.find_element(By.CLASS_NAME, "stepPending")
+                    li_element.click()
+                    break
+
                 # select this date
                 td.click()
-                print("Waiting Hours")
-                time.sleep(15)
+                
+                # now time some time to get the hours so we nee to wait
+                attempt = 1
+                while True:
+                    attempt += 1
+                    # get options with hours (ignore empty hour)
+                    options = input_time.find_elements(By.XPATH, './/option[@value and normalize-space(@value)!=""]')
+                    if options:
+                        break
+                    else:
+                        time.sleep(1)
+                        if attempt >= 10: break
+
                 # check hours
-                options = input_time.find_elements(By.XPATH, './/option[@value]')
-                print(f"Hours", input_time.get_attribute('outerHTML'))
+                # options = input_time.find_elements(By.XPATH, './/option[@value]')
                 if not options: continue
                 hour = options[0].get_attribute("value")
                 options[0].click()
                 print("Display Hour", hour)
-                return True
+                if hour:
+                    msg = f"{'*'*50}\n" \
+                          f"Appointment {type_appointment} \n" \
+                          f"Date: {date} \n"\
+                          f"Hour: {hour} \n" \
+                          f"{'*'*50}\n"
+                    print(msg)
+                    return True
 
             # get next months
+            # input_date.click()
             next_button = driver.find_element(By.CLASS_NAME, 'ui-datepicker-next')
             next_button.click()
 
@@ -162,10 +206,13 @@ def set_appointment() -> bool:
 
         this function search on Mexico, GDL and MTY
     """
-    print("Current dates")
-    print(f"Consular: {date_consular}")
-    print(f"ASC: {date_asc}")
-    
+    msg = f"{'*'*50}\n" \
+          f"Current Appointments:\n" \
+          f"Consulate: {date_consular}\n" \
+          f"ASC: {date_asc}:\n" \
+          f"{'*'*50}\n"
+    print(msg)
+
     # set appointment on consulate
     input_cities = Select(driver.find_element(By.ID, "appointments_consulate_appointment_facility_id"))
     input_date_name = "appointments_consulate_appointment_date_input"
@@ -182,23 +229,36 @@ def set_appointment() -> bool:
     print(f"ASC appointment {status}")
     if not status: return False
 
+    status = button_make_appointment()
+    if not status: return False
+
     return True
 
+def button_make_appointment():
+    # find the button
+    btn_appointment = driver.find_element(By.ID, "appointments_submit")
+    btn_appointment.click()
+
+    # wait for modal
+    wait = WebDriverWait(driver, 10)
+    modal = wait.until(EC.visibility_of_element_located((By.CSS_SELECTOR, ".reveal[style*='display: block;']")))
+
+    # find the confirmation button and click 
+    btn_confirm = modal.find_element(By.XPATH, ".//a[contains(@class, 'button') and contains(@class, 'alert')]")
+    btn_confirm.click()
 
 if __name__ == '__main__':
     EMAIL = "olgaclz@hotmail.com"
     PASSWORD = "visa_test_2020"
-
-    # create driver
-    options = webdriver.ChromeOptions() 
-    options.add_experimental_option("excludeSwitches", ["enable-logging"])
-    options.add_argument('--incognito')
-    # options.add_argument('--headless')
-    options_proxy = generate_proxy()
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options, seleniumwire_options=options_proxy)
-    # driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-
     try:
+        options = webdriver.ChromeOptions() 
+        options.add_experimental_option("excludeSwitches", ["enable-logging"])
+        options.add_argument('--incognito')
+        # options.add_argument('--headless')
+        options_proxy = generate_proxy()
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options, seleniumwire_options=options_proxy)
+        # driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+        driver.get("https://ais.usvisa-info.com/es-mx/niv/users/sign_in")
         driver.get("https://ais.usvisa-info.com/es-mx/niv/users/sign_in")
         set_login(driver)
         date_consular, date_asc = get_current_appointment(driver)
