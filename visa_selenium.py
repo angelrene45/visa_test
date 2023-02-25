@@ -278,7 +278,7 @@ if __name__ == '__main__':
     options.add_argument('--incognito')
     # options.add_argument('--headless')
     
-    for proxy in generate_proxy(n=4):
+    for proxy in generate_proxy():
         print(proxy)
         try:
             driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options, seleniumwire_options=proxy)

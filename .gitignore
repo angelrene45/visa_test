@@ -1,0 +1,5 @@
+__pycache__
+.pytest_cache
+app.egg-info
+static/*/*[.jpg, .jpeg, .png]
+static/*[.sql, .dump]
