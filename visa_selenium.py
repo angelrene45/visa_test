@@ -1,43 +1,54 @@
 import time
 import re
-import sys
 from datetime import datetime 
 
 import dateparser
 from seleniumwire import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
-from selenium.common.exceptions import WebDriverException
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support.ui import Select
 
-def generate_proxy():
+def generate_proxy(n=None):
     """
         Proxies for proxy seller
 
         Your proxy:
-        166.88.125.193:8800
-        185.206.128.134:8800
-        185.206.128.49:8800
-        166.88.125.75:8800
-        196.51.149.86:8800
-        196.51.149.63:8800
-        185.206.128.217:8800
-        185.206.128.97:8800
-        196.51.146.104:8800
-        196.51.146.46:8800
+        
     """
-    return {
-        'proxy': {
-            'http': 'http://166.88.125.75:8800',
-            'https': 'https://166.88.125.75:8800',
-            'no_proxy': 'localhost,127.0.0.1'
-        }
-    }
+    proxies = [
+        "166.88.125.193:8800",
+        "185.206.128.134:8800",
+        "185.206.128.49:8800",
+        "166.88.125.75:8800",
+        "196.51.149.86:8800",
+        "196.51.149.63:8800",
+        "185.206.128.217:8800",
+        "185.206.128.97:8800",
+        "196.51.146.104:8800",
+        "196.51.146.46:8800"
+    ]
 
+    if n is not None:
+        yield {
+            'proxy': {
+                'http': f'http://{proxies[n]}',
+                'https': f'https://{proxies[n]}',
+                'no_proxy': 'localhost,127.0.0.1'
+            }
+        }
+
+    for proxy in proxies:
+        yield {
+            'proxy': {
+                'http': f'http://{proxy}',
+                'https': f'https://{proxy}',
+                'no_proxy': 'localhost,127.0.0.1'
+            }
+        }
+         
 def set_login(driver):
     email = driver.find_element(By.NAME, "user[email]")
     email.send_keys(EMAIL)
@@ -90,10 +101,12 @@ def set_single_appointment(type_appointment, input_cities, input_date_name, inpu
     if type_appointment == 'consulate':
         element_validation = driver.find_element(By.ID, "consulate_date_time_not_available")
         cities_names = ["Guadalajara", "Mexico City", "Monterrey"]
+        cities_names = ["Guadalajara"]
 
     elif type_appointment == 'asc':
         element_validation = driver.find_element(By.ID, "asc_date_time_not_available")
         cities_names = ["Guadalajara ASC", "Mexico City ASC", "Monterrey ASC"]
+        cities_names = ["Guadalajara ASC"]
 
     # wait for 10 seconds for inputs 
     wait = WebDriverWait(driver, 10)
@@ -159,6 +172,12 @@ def set_single_appointment(type_appointment, input_cities, input_date_name, inpu
                     li_element = driver.find_element(By.CLASS_NAME, "stepPending")
                     li_element.click()
                     break
+
+                # check date is greater than minimum date
+                minimum_date = datetime(2023, 3, 15)
+                if new_date < minimum_date:
+                    print(f"Date {new_date} is lower than minimum date {minimum_date}")
+                    continue
 
                 # select this date
                 td.click()
@@ -247,29 +266,37 @@ def button_make_appointment():
     btn_confirm = modal.find_element(By.XPATH, ".//a[contains(@class, 'button') and contains(@class, 'alert')]")
     btn_confirm.click()
 
+    return True
+
 if __name__ == '__main__':
     EMAIL = "olgaclz@hotmail.com"
     PASSWORD = "visa_test_2020"
+
+    # try to connect using proxy 
+    options = webdriver.ChromeOptions() 
+    options.add_experimental_option("excludeSwitches", ["enable-logging"])
+    options.add_argument('--incognito')
+    # options.add_argument('--headless')
+    
+    for proxy in generate_proxy(n=4):
+        print(proxy)
+        try:
+            driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options, seleniumwire_options=proxy)
+            driver.get("https://ais.usvisa-info.com/es-mx/niv/users/sign_in")
+            break # here the proxy is working
+        except Exception as e:
+            print(f"Error on proxy")
+            driver.quit()
+
     try:
-        options = webdriver.ChromeOptions() 
-        options.add_experimental_option("excludeSwitches", ["enable-logging"])
-        options.add_argument('--incognito')
-        # options.add_argument('--headless')
-        options_proxy = generate_proxy()
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options, seleniumwire_options=options_proxy)
-        # driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-        driver.get("https://ais.usvisa-info.com/es-mx/niv/users/sign_in")
-        driver.get("https://ais.usvisa-info.com/es-mx/niv/users/sign_in")
         set_login(driver)
         date_consular, date_asc = get_current_appointment(driver)
         driver.get("https://ais.usvisa-info.com/es-mx/niv/schedule/46717687/appointment")
-        
         # try to set new appointment
         status = set_appointment()
-
+        print(f"New Appointment with status: {status}")
     except Exception as e:
         print(e)
     finally:
         pass
         # driver.quit()
-
