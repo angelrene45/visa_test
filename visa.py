@@ -1,6 +1,7 @@
 import requests
 import json
 import random
+import time
 from dateutil.parser import parse
 
 import bs4 
@@ -107,13 +108,15 @@ APPOINTMENT_URL = "https://ais.usvisa-info.com/es-mx/niv/schedule/46717687/appoi
 session = requests.Session()
 # Get header and proxy
 header = generate_header()
-proxy = generate_proxy()
+# proxy = generate_proxy()
 # set header and proxy
 session.headers.update(header)
-session.proxies = proxy
+# session.proxies = proxy
 
 # Login
 set_login(session)
+print("Login done!")
+time.sleep(1)
 
 # Appointment Page
 consulate = {
@@ -126,13 +129,22 @@ asc = {
     "82" : "Mexico City",
     "83" : "Monterrey"
 }
-response = session.request("GET", APPOINTMENT_URL)
-if response.status_code != 200: raise Exception("Error in get appointment page")
-html = bs4.BeautifulSoup(response.content, "html.parser")
+attempts = 0
+while attempts < 5:
+    response = session.request("GET", APPOINTMENT_URL)
+    html = bs4.BeautifulSoup(response.content, "html.parser")
 
-# get authenticity_token from <form>
-input_element = html.find("input", attrs={"name": "authenticity_token"})
-if not input_element: raise Exception(f'No authenticity_token: {html}')
+    input_element = html.find("input", attrs={"name": "authenticity_token"})
+    if input_element:
+        break  # found authenticity_token, exit to loop
+
+    attempts += 1
+    time.sleep(1)  # wait 1 second for next attempt
+    print(f"Remaining attempt: {attempts}")
+
+if not input_element:
+    raise Exception(f'No authenticity_token: {html.prettify()}')
+
 authenticity_token = input_element["value"]
 print(authenticity_token)
 
@@ -222,15 +234,16 @@ for consulate_date in dates:
     payload = {
         "utf8": "✓",
         "authenticity_token": authenticity_token,
-        "confirmed_limit_message": "1",
-        "appointments[consulate_appointment][facility_id]": "66",
+        "confirmed_limit_message": 1,
+        "appointments[consulate_appointment][facility_id]": 66,
         "appointments[consulate_appointment][date]": consulate_date,
-        "appointments[consulate_appointment][time]": consulate_date,
-        "appointments[asc_appointment][facility_id]": "77",
+        "appointments[consulate_appointment][time]": consulate_hour,
+        "appointments[asc_appointment][facility_id]": 77,
         "appointments[asc_appointment][date]": cas_date,
         "appointments[asc_appointment][time]": cas_hour,
     }
 
+    print(payload)
     headers = {
         "Content-Type": "application/x-www-form-urlencoded",
         "Accept-Language": "en-US,en;q=0.9,es-ES;q=0.8,es;q=0.7",
@@ -257,7 +270,5 @@ for consulate_date in dates:
 
 
 
-
-    
     
 # https://stackoverflow.com/questions/51351443/get-csrf-token-using-python-requests
