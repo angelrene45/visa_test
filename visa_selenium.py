@@ -67,7 +67,7 @@ def set_login(driver):
 
 def get_current_appointment(driver):
     try:
-        wait = WebDriverWait(driver, 10)
+        wait = WebDriverWait(driver, 4)
         continue_button = wait.until(EC.presence_of_element_located((By.LINK_TEXT, 'Continuar')))
 
         consular_appt = driver.find_element(By.CLASS_NAME, "consular-appt")
@@ -191,12 +191,16 @@ def set_single_appointment(type_appointment, input_cities, input_date_name, inpu
                     if options:
                         break
                     else:
-                        time.sleep(1)
+                        time.sleep(2)
                         if attempt >= 10: break
 
                 # check hours
-                # options = input_time.find_elements(By.XPATH, './/option[@value]')
-                if not options: continue
+                if not options:
+                    input_date.click() # show again the date picker
+                    time.sleep(1) # wait 1 seconds 
+                    continue # try with next date on date picker
+                
+                # select the first available hour
                 hour = options[0].get_attribute("value")
                 options[0].click()
                 print("Display Hour", hour)
