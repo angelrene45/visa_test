@@ -290,7 +290,7 @@ if __name__ == '__main__':
             break # here the proxy is working
         except Exception as e:
             print(f"Error on proxy")
-            driver.quit()
+            # driver.quit()
 
     try:
         set_login(driver)
