@@ -112,16 +112,17 @@ def set_single_appointment(type_appointment, input_cities, input_date_name, inpu
     wait = WebDriverWait(driver, 10)
     print(f"Appointment {type_appointment}")
 
+    # try on every city on the list
     for city in cities_names:
         # select current city
         input_cities.select_by_visible_text(city)
-        time.sleep(2)
+        time.sleep(1)
         print(f"City: {city}")
 
         # check if there are appointments
         if element_validation.is_displayed():
             print(f"There aren't appointments on {city}")
-            continue
+            continue # continue with next city
         
         # get inputs and validation from inputs
         try:
@@ -130,17 +131,16 @@ def set_single_appointment(type_appointment, input_cities, input_date_name, inpu
         except Exception as e:
             print(f"There aren't appointments on {city}")
             print(e)
-            continue
+            continue # continue with next city
 
-        # click consular dates
+        # click consular dates (open date picker)
         input_date.click()
-
-        # get div from datepicker
-        datepicker = driver.find_element(By.ID, 'ui-datepicker-div')
 
         # try on consulate 
         date_greater_than_current = False
         while True:
+            # get div from date picker
+            datepicker = driver.find_element(By.ID, 'ui-datepicker-div')
             month = driver.find_element(By.CLASS_NAME, 'ui-datepicker-month').text
             year = driver.find_element(By.CLASS_NAME, 'ui-datepicker-year').text
             if year == "2025" or date_greater_than_current: break
@@ -171,18 +171,18 @@ def set_single_appointment(type_appointment, input_cities, input_date_name, inpu
                     # hide date picker (click on any element for hide datepicker)
                     li_element = driver.find_element(By.CLASS_NAME, "stepPending")
                     li_element.click()
-                    break
+                    break # continue with next city
 
                 # check date is greater than minimum date
                 minimum_date = datetime(2023, 3, 15)
                 if new_date < minimum_date:
                     print(f"Date {new_date} is lower than minimum date {minimum_date}")
-                    continue
+                    continue # continue with next date
 
-                # select this date
+                # here the date is well so now select date 
                 td.click()
                 
-                # now time some time to get the hours so we nee to wait
+                # now we wait for get the time (hours available)
                 attempt = 1
                 while True:
                     attempt += 1
@@ -214,9 +214,8 @@ def set_single_appointment(type_appointment, input_cities, input_date_name, inpu
                     return True
 
             # get next months
-            # input_date.click()
             next_button = driver.find_element(By.CLASS_NAME, 'ui-datepicker-next')
-            next_button.click()
+            if next_button.is_displayed(): next_button.click()
 
             # wait for refresh date picker
             driver.implicitly_wait(2)
