@@ -1,5 +1,6 @@
 import time
 import re
+import random
 from datetime import datetime 
 
 import dateparser
@@ -11,12 +12,9 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support.ui import Select
 
-def generate_proxy(n=None):
+def generate_proxy():
     """
-        Proxies for proxy seller
-
-        Your proxy:
-        
+        Proxies from proxy seller
     """
     proxies = [
         "166.88.125.193:8800",
@@ -30,16 +28,17 @@ def generate_proxy(n=None):
         "196.51.146.104:8800",
         "196.51.146.46:8800"
     ]
-
-    if n is not None:
-        yield {
-            'proxy': {
-                'http': f'http://{proxies[n]}',
-                'https': f'https://{proxies[n]}',
-                'no_proxy': 'localhost,127.0.0.1'
-            }
+    # the first time send random proxy
+    random_number = random.randint(0, len(proxies)-1)
+    yield {
+        'proxy': {
+            'http': f'http://{proxies[random_number]}',
+            'https': f'https://{proxies[random_number]}',
+            'no_proxy': 'localhost,127.0.0.1'
         }
+    }
 
+    # after first try now send proxy in order
     for proxy in proxies:
         yield {
             'proxy': {
@@ -279,7 +278,7 @@ if __name__ == '__main__':
     options = webdriver.ChromeOptions() 
     options.add_experimental_option("excludeSwitches", ["enable-logging"])
     options.add_argument('--incognito')
-    # options.add_argument('--headless')
+    options.add_argument('--headless')
     
     for proxy in generate_proxy():
         print(proxy)
