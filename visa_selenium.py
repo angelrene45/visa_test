@@ -69,9 +69,11 @@ def get_current_appointment(driver):
         wait = WebDriverWait(driver, 4)
         continue_button = wait.until(EC.presence_of_element_located((By.LINK_TEXT, 'Continuar')))
 
+        # get date from consulate appointment
         consular_appt = driver.find_element(By.CLASS_NAME, "consular-appt")
         asc_appt = driver.find_element(By.CLASS_NAME, "asc-appt")
 
+        # get date from asc appointment
         consular_appt_text = consular_appt.text
         asc_appt_text = asc_appt.text
 
@@ -91,19 +93,39 @@ def get_current_appointment(driver):
             return date_consular, date_asc
     except Exception as e:
         print("There aren't current appointments")
+        print("Use default dates")
         return '2024-08-30', '2024-08-30'
+
+def navigate_appointment_page():
+    wait = WebDriverWait(driver, 5)
+    continue_button = wait.until(EC.presence_of_element_located((By.LINK_TEXT, 'Continuar')))
+    href_continue = continue_button.get_attribute("href")
+    id_appointment = href_continue.split('/')[6]
+    appointment_page = f"{BASE_URL}/schedule/{id_appointment}/appointment"
+    # navigate to appointment page
+    driver.get(appointment_page)
+
+def exist_appointments_on_current_city(type_appointment):
+    if type_appointment == 'consulate':
+        element_validation = driver.find_element(By.ID, "consulate_date_time_not_available")
+    elif type_appointment == 'asc':
+        element_validation = driver.find_element(By.ID, "asc_date_time_not_available")
+
+    if element_validation.is_displayed():
+        print(f"There aren't appointments on {type_appointment}")
+        return False
+    
+    return True
 
 def set_single_appointment(type_appointment, input_cities, input_date_name, input_time_name) -> bool:
     """
         Function that set appointment from consulate or ASC
     """
     if type_appointment == 'consulate':
-        element_validation = driver.find_element(By.ID, "consulate_date_time_not_available")
         cities_names = ["Guadalajara", "Mexico City", "Monterrey"]
         cities_names = ["Guadalajara"]
 
     elif type_appointment == 'asc':
-        element_validation = driver.find_element(By.ID, "asc_date_time_not_available")
         cities_names = ["Guadalajara ASC", "Mexico City ASC", "Monterrey ASC"]
         cities_names = ["Guadalajara ASC"]
 
@@ -119,7 +141,7 @@ def set_single_appointment(type_appointment, input_cities, input_date_name, inpu
         print(f"City: {city}")
 
         # check if there are appointments
-        if element_validation.is_displayed():
+        if not exist_appointments_on_current_city(type_appointment):
             print(f"There aren't appointments on {city}")
             continue # continue with next city
         
@@ -270,30 +292,39 @@ def button_make_appointment():
 
     return True
 
+
 if __name__ == '__main__':
-    EMAIL = "olgaclz@hotmail.com"
-    PASSWORD = "visa_test_2020"
+    # EMAIL = "olgaclz@hotmail.com"
+    # PASSWORD = "visa_test_2020"
+
+    EMAIL = "ar.herrera0@gmail.com"
+    PASSWORD = "visaAngel1997"
 
     # try to connect using proxy 
     options = webdriver.ChromeOptions() 
     options.add_experimental_option("excludeSwitches", ["enable-logging"])
     options.add_argument('--incognito')
-    options.add_argument('--headless')
+    # options.add_argument('--headless')
+
+    BASE_URL = "https://ais.usvisa-info.com/es-mx/niv"
     
     for proxy in generate_proxy():
         print(proxy)
         try:
             driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options, seleniumwire_options=proxy)
-            driver.get("https://ais.usvisa-info.com/es-mx/niv/users/sign_in")
+            driver.get(f"{BASE_URL}/users/sign_in")
             break # here the proxy is working
         except Exception as e:
             print(f"Error on proxy")
             # driver.quit()
 
     try:
+        # login in page
         set_login(driver)
+        # get current appointments from user
         date_consular, date_asc = get_current_appointment(driver)
-        driver.get("https://ais.usvisa-info.com/es-mx/niv/schedule/46717687/appointment")
+        # navigate to appointment page 
+        navigate_appointment_page()
         # try to set new appointment
         status = set_appointment()
         print(f"New Appointment with status: {status}")
