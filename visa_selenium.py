@@ -315,7 +315,7 @@ if __name__ == '__main__':
     options = webdriver.ChromeOptions() 
     options.add_experimental_option("excludeSwitches", ["enable-logging"])
     options.add_argument('--incognito')
-    # options.add_argument('--headless')
+    options.add_argument('--headless')
 
     BASE_URL = "https://ais.usvisa-info.com/es-mx/niv"
     
