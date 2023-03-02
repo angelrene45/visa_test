@@ -1,7 +1,7 @@
 """
     Example usage:
-    python visa_selenium.py --email ar.herrera0@gmail.com --password visaAngel1997
-    python visa_selenium.py --email olgaclz@hotmail.com --password visa_test_2020
+    python visa_selenium.py --email ar.herrera0@gmail.com --password visaAngel1997 --maxyear 2024
+    python visa_selenium.py --email olgaclz@hotmail.com --password visa_test_2020 --maxyear 2024 --mindate 2023-03-15
 """
 import time
 import re
@@ -170,7 +170,7 @@ def set_single_appointment(type_appointment, input_cities, input_date_name, inpu
             datepicker = driver.find_element(By.ID, 'ui-datepicker-div')
             month = driver.find_element(By.CLASS_NAME, 'ui-datepicker-month').text
             year = driver.find_element(By.CLASS_NAME, 'ui-datepicker-year').text
-            if year == "2025" or date_greater_than_current: break
+            if year == args.maxyear or date_greater_than_current: break
 
             # finds all td for dates
             tds = datepicker.find_elements(By.TAG_NAME, 'td')
@@ -201,10 +201,11 @@ def set_single_appointment(type_appointment, input_cities, input_date_name, inpu
                     break # continue with next city
 
                 # check date is greater than minimum date
-                minimum_date = datetime(2023, 3, 15)
-                if new_date < minimum_date:
-                    print(f"Date {new_date} is lower than minimum date {minimum_date}")
-                    continue # continue with next date
+                if args.mindate:
+                    minimum_date = datetime.strptime(args.mindate, '%Y-%m-%d')
+                    if new_date < minimum_date:
+                        print(f"Date {new_date} is lower than minimum date {minimum_date}")
+                        continue # continue with next date
 
                 # here the date is well so now select date 
                 td.click()
@@ -303,6 +304,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--email', type=str, help='Email form user')
     parser.add_argument('--password', type=str, help='Password from user')
+    parser.add_argument('--maxyear', type=str, help='Max year for searching')
+    parser.add_argument('--mindate', type=str, help='Min date (script cant schedule before this date %Y-%m-%d)')
     args = parser.parse_args()
 
     EMAIL = args.email
