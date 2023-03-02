@@ -1,6 +1,12 @@
+"""
+    Example usage:
+    python visa_selenium.py --email ar.herrera0@gmail.com --password visaAngel1997
+    python visa_selenium.py --email olgaclz@hotmail.com --password visa_test_2020
+"""
 import time
 import re
 import random
+import argparse
 from datetime import datetime 
 
 import dateparser
@@ -294,11 +300,13 @@ def button_make_appointment():
 
 
 if __name__ == '__main__':
-    # EMAIL = "olgaclz@hotmail.com"
-    # PASSWORD = "visa_test_2020"
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--email', type=str, help='Email form user')
+    parser.add_argument('--password', type=str, help='Password from user')
+    args = parser.parse_args()
 
-    EMAIL = "ar.herrera0@gmail.com"
-    PASSWORD = "visaAngel1997"
+    EMAIL = args.email
+    PASSWORD = args.password
 
     # try to connect using proxy 
     options = webdriver.ChromeOptions() 
