@@ -17,6 +17,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support.ui import Select
+from selenium.common.exceptions import NoSuchElementException
 
 def generate_proxy():
     """
@@ -110,6 +111,18 @@ def navigate_appointment_page():
     appointment_page = f"{BASE_URL}/schedule/{id_appointment}/appointment"
     # navigate to appointment page
     driver.get(appointment_page)
+
+    try:
+        # if there are multiples users on same accounts, press button continue
+        input_element = driver.find_element(By.NAME, 'commit')
+        if input_element:
+            input_element.click()
+            # (validation) wait to select is available
+            wait.until(EC.presence_of_element_located((By.ID, 'appointments_consulate_appointment_facility_id')))
+
+    except NoSuchElementException:
+        print('Button continue from multiple account not found')
+
 
 def exist_appointments_on_current_city(type_appointment):
     if type_appointment == 'consulate':
