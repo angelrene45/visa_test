@@ -1,12 +1,13 @@
 """
     Example usage:
     python visa_selenium.py --email ar.herrera0@gmail.com --password visaAngel1997 --maxyear 2024
-    python visa_selenium.py --email olgaclz@hotmail.com --password visa_test_2020 --maxyear 2024 --mindate 2023-03-15
+    python visa_selenium.py --email olgaclz@hotmail.com --password visa_test_2020 --maxyear 2024 --mindate 2023-03-31
 """
 import time
 import re
 import random
 import argparse
+import smtplib, ssl
 from datetime import datetime 
 
 import dateparser
@@ -123,7 +124,6 @@ def navigate_appointment_page():
     except NoSuchElementException:
         print('Button continue from multiple account not found')
 
-
 def exist_appointments_on_current_city(type_appointment):
     if type_appointment == 'consulate':
         element_validation = driver.find_element(By.ID, "consulate_date_time_not_available")
@@ -140,6 +140,8 @@ def set_single_appointment(type_appointment, input_cities, input_date_name, inpu
     """
         Function that set appointment from consulate or ASC
     """
+    global msg_mail
+
     if type_appointment == 'consulate':
         cities_names = ["Guadalajara", "Mexico City", "Monterrey"]
         cities_names = ["Guadalajara"]
@@ -252,6 +254,7 @@ def set_single_appointment(type_appointment, input_cities, input_date_name, inpu
                           f"Hour: {hour} \n" \
                           f"{'*'*50}\n"
                     print(msg)
+                    msg_mail += msg
                     return True
 
             # get next months
@@ -312,6 +315,19 @@ def button_make_appointment():
 
     return True
 
+def send_email() -> None:
+    port = 465  # For SSL
+    smtp_server = "smtp.gmail.com"
+    sender_email = "rejuanssdev@gmail.com"  # Enter your address
+    receiver_email = "ar.herrera0@gmail.com"  # Enter receiver address
+    password = "opsbelahcnfckgpo"
+    message = 'Subject: {}\n\n{}'.format(f"Visa Appointment advanced from {EMAIL}", msg_mail)
+    context = ssl.create_default_context()
+    with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
+        server.login(sender_email, password)
+        server.sendmail(sender_email, receiver_email, message)
+        return True
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -323,6 +339,7 @@ if __name__ == '__main__':
 
     EMAIL = args.email
     PASSWORD = args.password
+    msg_mail = ""
 
     # try to connect using proxy 
     options = webdriver.ChromeOptions() 
@@ -352,6 +369,7 @@ if __name__ == '__main__':
         # try to set new appointment
         status = set_appointment()
         print(f"New Appointment with status: {status}")
+        if status: send_email()
     except Exception as e:
         print(e)
     finally:
