@@ -142,17 +142,27 @@ def set_single_appointment(type_appointment, input_cities, input_date_name, inpu
     """
     global msg_mail
 
+    cities_names = []
     if type_appointment == 'consulate':
-        cities_names = ["Guadalajara", "Mexico City", "Monterrey"]
-        cities_names = ["Guadalajara"]
+        for name in args.cities:
+            if name.upper() == 'GDL': cities_names.append("Guadalajara")
+            elif name.upper() == 'CDMX': cities_names.append("Mexico City")
+            elif name.upper() == 'MTY': cities_names.append("Monterrey")
+            else: print(f"City Not found {name}")
 
     elif type_appointment == 'asc':
         cities_names = ["Guadalajara ASC", "Mexico City ASC", "Monterrey ASC"]
         cities_names = ["Guadalajara ASC"]
+        for name in args.cities:
+            if name.upper() == 'GDL': cities_names.append("Guadalajara ASC")
+            elif name.upper() == 'CDMX': cities_names.append("Mexico City ASC")
+            elif name.upper() == 'MTY': cities_names.append("Monterrey ASC")
+            else: print(f"City Not found {name}")
 
     # wait for 10 seconds for inputs 
     wait = WebDriverWait(driver, 10)
     print(f"Appointment {type_appointment}")
+    print(f"Searching appointments on cities: {cities_names}")
 
     # try on every city on the list
     for city in cities_names:
@@ -280,19 +290,23 @@ def set_appointment() -> bool:
     print(msg)
 
     # set appointment on consulate
+    print("*"*50)
     input_cities = Select(driver.find_element(By.ID, "appointments_consulate_appointment_facility_id"))
     input_date_name = "appointments_consulate_appointment_date_input"
     input_time_name = "appointments_consulate_appointment_time"
     status = set_single_appointment('consulate', input_cities, input_date_name, input_time_name)
     print(f"Consulate appointment {status}")
+    print("*"*50)
     if not status: return False
 
     # set appointment on asc
+    print("*"*50)
     input_cities = Select(driver.find_element(By.ID, "appointments_asc_appointment_facility_id"))
     input_date_name = "appointments_asc_appointment_date_input"
     input_time_name = "appointments_asc_appointment_time"
     status = set_single_appointment('asc', input_cities, input_date_name, input_time_name)
     print(f"ASC appointment {status}")
+    print("*"*50)
     if not status: return False
 
     status = button_make_appointment()
@@ -335,6 +349,7 @@ if __name__ == '__main__':
     parser.add_argument('--password', type=str, help='Password from user')
     parser.add_argument('--maxyear', type=str, help='Max year for searching')
     parser.add_argument('--mindate', type=str, help='Min date (script cant schedule before this date %Y-%m-%d)')
+    parser.add_argument('--cities', nargs='+', default=['GDL'], help='Set list of cities that search appointments GDL CDMX MTY by default only search on Guadalajara')
     args = parser.parse_args()
 
     EMAIL = args.email
