@@ -2,13 +2,14 @@
     Example usage:
     python visa_selenium.py --email ar.herrera0@gmail.com --password visaAngel1997 --maxyear 2024
     python visa_selenium.py --email olgaclz@hotmail.com --password visa_test_2020 --maxyear 2024 --mindate 2023-03-31
+    python visa_selenium.py --email <email> --password <password> --maxyear 2024 --mindate 2023-03-31 --cities GDL MXN MTY
 """
 import time
 import re
 import random
 import argparse
 import smtplib, ssl
-from datetime import datetime 
+from datetime import datetime, timedelta
 
 import dateparser
 from seleniumwire import webdriver
@@ -342,19 +343,39 @@ def send_email() -> None:
         server.sendmail(sender_email, receiver_email, message)
         return True
 
+def get_min_date_default():
+    """
+        If mindate is not provided we calculate 1 week after now and use as a mindate
+        this avoid schedule appointment very closes
+    """
+    # Get the current date
+    current_date = datetime.now()
+
+    # Add one week
+    one_week = timedelta(weeks=1)
+    one_week_after_current_date = current_date + one_week
+
+    # Format the date in the desired format
+    formatted_date = one_week_after_current_date.strftime("%Y-%m-%d")
+
+    print(f"Minimum Date is: {formatted_date}")
+    return formatted_date
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--email', type=str, help='Email form user')
     parser.add_argument('--password', type=str, help='Password from user')
     parser.add_argument('--maxyear', type=str, help='Max year for searching')
-    parser.add_argument('--mindate', type=str, help='Min date (script cant schedule before this date %Y-%m-%d)')
+    parser.add_argument('--mindate', type=str, help='Min date (script cant schedule before this date %Y-%m-%d) if is not provided we calculate 1 week after now as mindate')
     parser.add_argument('--cities', nargs='+', default=['GDL'], help='Set list of cities that search appointments GDL CDMX MTY by default only search on Guadalajara')
     args = parser.parse_args()
 
     EMAIL = args.email
     PASSWORD = args.password
     msg_mail = ""
+
+    # if mindate is not provided we use one week after now as a mindate
+    if not args.mindate: args.mindate = get_min_date_default()
 
     # try to connect using proxy 
     options = webdriver.ChromeOptions() 
