@@ -333,11 +333,11 @@ def button_make_appointment():
 def send_email() -> None:
     port = 465  # For SSL
     smtp_server = "smtp.gmail.com"
-    sender_email = "rejuanssdev@gmail.com"  # Enter your address
+    sender_email = "ar.herrera0us@gmail.com"  # Enter your address
+    password = "krjcvxinqtwhuaxb"
     receiver_email = "ar.herrera0@gmail.com"  # Enter receiver address
-    password = "opsbelahcnfckgpo"
     message = 'Subject: {}\n\n{}'.format(f"Visa Appointment advanced from {EMAIL}", msg_mail)
-    context = ssl.create_default_context()
+    context = ssl.create_default_context()    
     with smtplib.SMTP_SSL(smtp_server, port, context=context) as server:
         server.login(sender_email, password)
         server.sendmail(sender_email, receiver_email, message)
