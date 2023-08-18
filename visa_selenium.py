@@ -71,6 +71,12 @@ def generate_proxy():
         }
          
 def set_login(driver):
+    print("wait for email input...")
+    WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.NAME, "user[email]"))
+    )
+    print("email input loaded!")
+
     email = driver.find_element(By.NAME, "user[email]")
     email.send_keys(EMAIL)
 
@@ -361,6 +367,7 @@ def get_min_date_default():
         If mindate is not provided we calculate 1 week after now and use as a mindate
         this avoid schedule appointment very closes
     """
+    print("*"*200)
     # Get the current date
     current_date = datetime.now()
 
@@ -370,8 +377,7 @@ def get_min_date_default():
 
     # Format the date in the desired format
     formatted_date = one_week_after_current_date.strftime("%Y-%m-%d")
-
-    print(f"Minimum Date is: {formatted_date}")
+    print(f"Minimum Date by default: {formatted_date}")
     return formatted_date
 
 if __name__ == '__main__':
