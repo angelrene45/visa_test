@@ -20,6 +20,11 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support.ui import Select
 from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import TimeoutException, ElementNotInteractableException
+
+from utils.helpers import retry
+
+BASE_URL = "https://ais.usvisa-info.com/es-mx/niv"
 
 def generate_proxy():
     """
@@ -69,8 +74,12 @@ def generate_proxy():
                 'no_proxy': 'localhost,127.0.0.1'
             }
         }
-         
-def set_login(driver):
+
+@retry(attempts=3, delay=3, exceptions=(TimeoutException,))   
+def set_login(driver) -> bool:
+    # Go to sign_in page
+    driver.get(f"{BASE_URL}/users/sign_in")
+
     print("wait for email input...")
     WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.NAME, "user[email]"))
@@ -91,6 +100,15 @@ def set_login(driver):
 
     # wait the page loads full 
     driver.implicitly_wait(10)
+    time.sleep(4)
+
+    # Wait until button is present
+    WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.LINK_TEXT, 'Continuar'))
+    )
+    print("Button 'Continuar' exists.")
+
+    return True
 
 def get_current_appointment(driver):
     try:
@@ -124,25 +142,13 @@ def get_current_appointment(driver):
         print("Use default dates")
         return '2024-08-30', '2024-08-30'
 
-def navigate_appointment_page():
+def get_url_appointment_page() -> str:
     wait = WebDriverWait(driver, 5)
     continue_button = wait.until(EC.presence_of_element_located((By.LINK_TEXT, 'Continuar')))
     href_continue = continue_button.get_attribute("href")
     id_appointment = href_continue.split('/')[6]
     appointment_page = f"{BASE_URL}/schedule/{id_appointment}/appointment"
-    # navigate to appointment page
-    driver.get(appointment_page)
-
-    try:
-        # if there are multiples users on same accounts, press button continue
-        input_element = driver.find_element(By.NAME, 'commit')
-        if input_element:
-            input_element.click()
-            # (validation) wait to select is available
-            wait.until(EC.presence_of_element_located((By.ID, 'appointments_consulate_appointment_facility_id')))
-
-    except NoSuchElementException:
-        print('Button continue from multiple account not found')
+    return appointment_page
 
 def exist_appointments_on_current_city(type_appointment):
     if type_appointment == 'consulate':
@@ -168,6 +174,7 @@ def set_single_appointment(type_appointment, input_cities, input_date_name, inpu
             if name.upper() == 'GDL': cities_names.append("Guadalajara")
             elif name.upper() == 'CDMX': cities_names.append("Mexico City")
             elif name.upper() == 'MTY': cities_names.append("Monterrey")
+            elif name.upper() == 'TJ': cities_names.append("Tijuana")
             else: print(f"City Not found {name}")
 
     elif type_appointment == 'asc':
@@ -177,6 +184,7 @@ def set_single_appointment(type_appointment, input_cities, input_date_name, inpu
             if name.upper() == 'GDL': cities_names.append("Guadalajara ASC")
             elif name.upper() == 'CDMX': cities_names.append("Mexico City ASC")
             elif name.upper() == 'MTY': cities_names.append("Monterrey ASC")
+            elif name.upper() == 'TJ': cities_names.append("Tijuana ASC")
             else: print(f"City Not found {name}")
 
     # wait for 10 seconds for inputs 
@@ -187,9 +195,12 @@ def set_single_appointment(type_appointment, input_cities, input_date_name, inpu
     # try on every city on the list
     for city in cities_names:
         # select current city
-        input_cities.select_by_visible_text(city)
-        time.sleep(1)
         print(f"City: {city}")
+
+        input_cities.select_by_visible_text(city)
+        time.sleep(1.5)
+        input_cities.select_by_visible_text(city)
+        time.sleep(1.5)
 
         # check if there are appointments
         if not exist_appointments_on_current_city(type_appointment):
@@ -206,6 +217,7 @@ def set_single_appointment(type_appointment, input_cities, input_date_name, inpu
             continue # continue with next city
 
         # click consular dates (open date picker)
+        print("Click on input_date")
         input_date.click()
 
         # try on consulate 
@@ -215,7 +227,9 @@ def set_single_appointment(type_appointment, input_cities, input_date_name, inpu
             datepicker = driver.find_element(By.ID, 'ui-datepicker-div')
             month = driver.find_element(By.CLASS_NAME, 'ui-datepicker-month').text
             year = driver.find_element(By.CLASS_NAME, 'ui-datepicker-year').text
-            if year == args.maxyear or date_greater_than_current: break
+            if year == args.maxyear or date_greater_than_current: 
+                print(f"Break year is equals to maxyear {year} == {args.maxyear} or date_greater_than_current: {date_greater_than_current}")
+                break
 
             # finds all td for dates
             tds = datepicker.find_elements(By.TAG_NAME, 'td')
@@ -296,7 +310,8 @@ def set_single_appointment(type_appointment, input_cities, input_date_name, inpu
             
     return False
 
-def set_appointment() -> bool:
+@retry(attempts=3, delay=3) 
+def set_appointment(appointment_page: str) -> bool:
     """
         Try to advance appointment 
 
@@ -308,6 +323,18 @@ def set_appointment() -> bool:
           f"ASC: {date_asc}:\n" \
           f"{'*'*50}\n"
     print(msg)
+
+    # navigate to appointment page
+    driver.get(appointment_page)
+    time.sleep(4)
+
+    # if there are multiples users on same accounts, press button continue
+    input_element = driver.find_element(By.NAME, 'commit')
+    if input_element:
+        input_element.click()
+        # (validation) wait to select is available
+        wait = WebDriverWait(driver, 5)
+        wait.until(EC.presence_of_element_located((By.ID, 'appointments_consulate_appointment_facility_id')))
 
     # set appointment on consulate
     print("*"*50)
@@ -387,6 +414,7 @@ if __name__ == '__main__':
     parser.add_argument('--maxyear', type=str, help='Max year for searching')
     parser.add_argument('--mindate', type=str, help='Min date (script cant schedule before this date %Y-%m-%d) if is not provided we calculate 1 week after now as mindate')
     parser.add_argument('--cities', nargs='+', default=['GDL'], help='Set list of cities that search appointments GDL CDMX MTY by default only search on Guadalajara')
+    parser.add_argument('--headless', action='store_true', default=True, help='Open Web Explorer in System')
     args = parser.parse_args()
 
     EMAIL = args.email
@@ -398,35 +426,57 @@ if __name__ == '__main__':
 
     # try to connect using proxy 
     options = webdriver.ChromeOptions() 
-    options.add_experimental_option("excludeSwitches", ["enable-logging"])
-    options.add_argument('--incognito')
-    options.add_argument('--headless')
+    # options.add_experimental_option("excludeSwitches", ["enable-logging"])
+    options.add_argument("--headless")
+    options.add_argument("--start-maximized")
+    options.add_argument("--disable-extensions")
+    options.add_argument("--disable-infobars")
+    options.add_argument('--window-size=1920,1080')
 
-    BASE_URL = "https://ais.usvisa-info.com/es-mx/niv"
-    
-    for proxy in generate_proxy():
-        print(proxy)
-        try:
-            driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options, seleniumwire_options=proxy)
-            driver.get(f"{BASE_URL}/users/sign_in")
-            break # here the proxy is working
-        except Exception as e:
-            print(f"Error on proxy")
-            # driver.quit()
-
+    # for proxy in generate_proxy():
+    #     print(proxy)
+    #     try:
+    #         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options, seleniumwire_options=proxy)
+    #         driver.get(f"{BASE_URL}/users/sign_in")
+    #         break # here the proxy is working
+    #     except Exception as e:
+    #         print(f"Error on proxy")
+    #         # driver.quit()
+  
+    # set driver with proxy
     try:
-        # login in page
-        set_login(driver)
-        # get current appointments from user
-        date_consular, date_asc = get_current_appointment(driver)
-        # navigate to appointment page 
-        navigate_appointment_page()
-        # try to set new appointment
-        status = set_appointment()
-        print(f"New Appointment with status: {status}")
-        if status: send_email()
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
     except Exception as e:
-        print(e)
-    finally:
-        pass
-        # driver.quit()
+        print(f"Error on proxy")
+        exit()
+  
+    # login in
+    try:
+        set_login(driver)
+    except Exception as e:
+        print(f"Error on Login, Closing Program")
+        driver.quit()
+        exit()
+
+    # get current appointments from user
+    date_consular, date_asc = get_current_appointment(driver)
+
+    # navigate to appointment page 
+    try:
+        appointment_page = get_url_appointment_page()
+        print(f"appointment_page: {appointment_page}")
+    except Exception as e:
+        print(f"Error to Get appoitmnent page:\n{e}")
+        exit()
+  
+    # navigate to appointment page 
+    try:
+        # try to set new appointment
+        status = set_appointment(appointment_page)
+        print(f"New Appointment with status: {status}")
+    except Exception as e:
+        print(f"Error in function set_appointment:\n{e}")
+        exit()
+
+    # Send mail and notify user
+    if status: send_email()
