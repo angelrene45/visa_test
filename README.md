@@ -1,6 +1,15 @@
 # Visa Selenium
 Script to advance visa appointment
 
+
+## Setup Project On Linux
+- Install Google Chrome Driver, Follow Instructions [here](https://www.wikihow.com/Install-Google-Chrome-Using-Terminal-on-Linux)
+```bash
+python -m venv venv
+source venv/bin/activate 
+python -m pip install -r requirements.txt -v
+```
+
 Usage:
 ```bash
 python visa_selenium.py --email <email> --password <password> --maxyear <max-allowed-year> --mindate <min-date> --cities <cities-allowed> 

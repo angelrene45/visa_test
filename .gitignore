@@ -4,3 +4,4 @@ app.egg-info
 static/*/*[.jpg, .jpeg, .png]
 static/*[.sql, .dump]
 .vscode/
+venv/

@@ -28,32 +28,20 @@ BASE_URL = "https://ais.usvisa-info.com/es-mx/niv"
 
 def generate_proxy():
     """
-        Proxies from proxy seller
+        Proxies from InstantProxies.com
     """
     proxies = [
         # proxies mine
-        "38.154.99.201:8800",
-        "196.51.146.104:8800",
-        "196.51.149.86:8800",
-        "196.51.146.46:8800",
-        "38.154.99.141:8800",
         "38.154.99.168:8800",
-        "166.88.125.193:8800",
-        "166.88.125.75:8800",
-        "38.154.99.238:8800",
         "196.51.149.63:8800",
-
-        # proxies external
-        "15.204.148.183:8800",
-        "196.51.10.101:8800",
-        "15.204.148.215:8800",
-        "23.236.212.83:8800",
-        "107.158.41.217:8800",
-        "15.204.148.217:8800",
-        "196.51.10.71:8800",
-        "15.204.148.90:8800",
-        "23.236.212.111:8800",
-        "107.158.41.189:8800"
+        "38.154.99.238:8800",
+        "196.51.146.104:8800",
+        "38.154.99.141:8800",
+        "196.51.146.46:8800",
+        "196.51.149.86:8800",
+        "38.154.99.201:8800",
+        "166.88.125.193:8800",
+        "166.88.125.75:8800"
     ]
     # the first time send random proxy
     random_number = random.randint(0, len(proxies)-1)
@@ -433,22 +421,21 @@ if __name__ == '__main__':
     options.add_argument("--disable-infobars")
     options.add_argument('--window-size=1920,1080')
 
-    # for proxy in generate_proxy():
-    #     print(proxy)
-    #     try:
-    #         driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options, seleniumwire_options=proxy)
-    #         driver.get(f"{BASE_URL}/users/sign_in")
-    #         break # here the proxy is working
-    #     except Exception as e:
-    #         print(f"Error on proxy")
-    #         # driver.quit()
-  
-    # set driver with proxy
-    try:
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
-    except Exception as e:
-        print(f"Error on proxy")
-        exit()
+    # # set driver without proxy
+    # try:
+    #     driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+    # except Exception as e:
+    #     print(f"Error on proxy")
+    #     exit()
+
+    for proxy in generate_proxy():
+        print(f"Proxy Selected: {proxy}")
+        try:
+            driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options, seleniumwire_options=proxy)
+            driver.get(f"{BASE_URL}/users/sign_in")
+            break # here the proxy is working
+        except Exception as e:
+            print(f"Error on proxy")
   
     # login in
     try:
