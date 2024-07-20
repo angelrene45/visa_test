@@ -19,9 +19,10 @@ python visa_selenium.py --email <email> --password <password> --maxyear <max-all
 Example usage:
 ```bash
 python visa_selenium.py --email <email> --password <password> --maxyear 2024 --mindate 2023-03-31 --cities GDL CDMX TJ
+
 ```
 
-## Schedule Tasks in Crontab
+### Schedule Tasks in Crontab
 ```bash
 */15 * * * * /home/angelreh/repos/visa_test/venv/bin/python /home/angelreh/repos/visa_test/visa_selenium.py --email <email> --password <password> --maxyear 2025 --mindate 2023-03-31 --cities GDL CDMX TJ >> /var/tmp/visa_`date +\%Y_\%m_\%d_\%H_\%M`.log 2>&1
 ```
@@ -37,8 +38,12 @@ python -m seleniumwire extractcert
 ### Import cert in Windows
 Move the new certificate from the Certificates-Current User > Trusted Root Certification Authorities into Certificates (Local Computer) > Trusted Root Certification Authorities.
 
+
 ## How to setup gmail 
 You can follow this [Tutorial](https://www.youtube.com/watch?v=kTcmbZqNiGw)
+
+## Proxies
+We are using 10 proxies for $10/Month on [InstantProxies.com](InstantProxies.com)
 
 ## Cities Availables
 
