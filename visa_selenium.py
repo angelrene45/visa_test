@@ -12,6 +12,7 @@ import smtplib, ssl
 from datetime import datetime, timedelta
 
 import dateparser
+from tabulate import tabulate
 from seleniumwire import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
@@ -63,8 +64,9 @@ def generate_proxy():
             }
         }
 
-@retry(attempts=3, delay=3, exceptions=(TimeoutException,))   
+@retry(attempts=5, delay=5, exceptions=(TimeoutException,))   
 def set_login(driver) -> bool:
+    print("LOGIN PAGE START")
     # Go to sign_in page
     driver.get(f"{BASE_URL}/users/sign_in")
 
@@ -95,10 +97,11 @@ def set_login(driver) -> bool:
         EC.presence_of_element_located((By.LINK_TEXT, 'Continuar'))
     )
     print("Button 'Continuar' exists.")
-
+    print("LOGIN PAGE END")
     return True
 
 def get_current_appointment(driver):
+    print(f"Get Current Appoinment Info")
     try:
         wait = WebDriverWait(driver, 4)
         continue_button = wait.until(EC.presence_of_element_located((By.LINK_TEXT, 'Continuar')))
@@ -298,20 +301,13 @@ def set_single_appointment(type_appointment, input_cities, input_date_name, inpu
             
     return False
 
-@retry(attempts=3, delay=3) 
+@retry(attempts=5, delay=5) 
 def set_appointment(appointment_page: str) -> bool:
     """
         Try to advance appointment 
 
         this function search on Mexico, GDL and MTY
     """
-    msg = f"{'*'*50}\n" \
-          f"Current Appointments:\n" \
-          f"Consulate: {date_consular}\n" \
-          f"ASC: {date_asc}:\n" \
-          f"{'*'*50}\n"
-    print(msg)
-
     # navigate to appointment page
     driver.get(appointment_page)
     time.sleep(4)
@@ -396,6 +392,12 @@ def get_min_date_default():
     print(f"Minimum Date by default: {formatted_date}")
     return formatted_date
 
+def display_dict_to_tabulate(dictionary: dict) -> None:
+    values = [dictionary.values()]
+    columns_names = dictionary.keys()
+    print(tabulate(values, headers=columns_names, tablefmt="psql"))
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--email', type=str, help='Email form user')
@@ -409,6 +411,7 @@ if __name__ == '__main__':
     EMAIL = args.email
     PASSWORD = args.password
     msg_mail = ""
+    status = False
 
     # if mindate is not provided we use one week after now as a mindate
     if not args.mindate: args.mindate = get_min_date_default()
@@ -429,8 +432,12 @@ if __name__ == '__main__':
     #     print(f"Error on proxy")
     #     exit()
 
+    print(f"{'*'* 50} START SCRIPT {'*'* 50}")
+
     for proxy in generate_proxy():
-        print(f"Proxy Selected: {proxy}")
+        print(f"Proxy Selected:")
+        proxies = proxy.get("proxy", {})
+        display_dict_to_tabulate(proxies)
         try:
             driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options, seleniumwire_options=proxy)
             driver.get(f"{BASE_URL}/users/sign_in")
@@ -448,11 +455,12 @@ if __name__ == '__main__':
 
     # get current appointments from user
     date_consular, date_asc = get_current_appointment(driver)
+    display_dict_to_tabulate({"Date Consular": date_consular, "Date Asc": date_asc})
 
     # navigate to appointment page 
     try:
         appointment_page = get_url_appointment_page()
-        print(f"appointment_page: {appointment_page}")
+        print(f"Appointment Page: {appointment_page}")
     except Exception as e:
         print(f"Error to Get appoitmnent page:\n{e}")
         exit()
@@ -466,5 +474,6 @@ if __name__ == '__main__':
         print(f"Error in function set_appointment:\n{e}")
         exit()
 
+    print(f"{'*'* 50} END SCRIPT {'*'* 50}")
     # Send mail and notify user
     if status: send_email()
