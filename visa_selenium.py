@@ -123,7 +123,7 @@ def get_current_appointment(driver):
 
         if match_1 and match_2:
             date_str_1 = match_1.group()
-            date_str_2 = match_1.group()
+            date_str_2 = match_2.group()
 
             date_consular = dateparser.parse(date_str_1).strftime('%Y-%m-%d')
             date_asc = dateparser.parse(date_str_2).strftime('%Y-%m-%d')
